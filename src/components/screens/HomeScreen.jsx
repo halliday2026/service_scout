@@ -86,11 +86,13 @@ function DefaultLocationInput({ value, onSave }) {
 export default function HomeScreen({ onSelectService, isOffline, defaultLocation, onSaveDefaultLocation }) {
   return (
     <div className="flex flex-col items-center px-5 pt-12 pb-8 min-h-screen">
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-4 mb-12">
         <AppLogo size={52} />
-        <h1 className="text-2xl font-bold text-gray-900">Service Scout</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Service Scout</h1>
+          <p className="text-gray-500 text-sm">Find nearby service providers</p>
+        </div>
       </div>
-      <p className="text-gray-500 text-sm mb-12 text-center">Find nearby service providers</p>
 
       <div className="w-full flex flex-col gap-4">
         {SERVICES.map((s) => (
