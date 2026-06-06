@@ -13,7 +13,7 @@ const SERVICE_LABELS = {
 
 export default function ResultsScreen({ state, dispatch }) {
   const {
-    selectedService, locationState, loadingProviders,
+    selectedService, locationState, locationDeniedReason, loadingProviders,
     providers, sortBy, error, isOffline, manualInput, pendingGeocode,
   } = state
 
@@ -68,6 +68,7 @@ export default function ResultsScreen({ state, dispatch }) {
             onChange={(v) => dispatch({ type: 'SET_MANUAL_INPUT', payload: v })}
             onSubmit={() => dispatch({ type: 'SUBMIT_MANUAL' })}
             loading={pendingGeocode}
+            deniedReason={locationDeniedReason}
           />
         )}
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import AppLogo from '../ui/AppLogo'
 import ServiceButton from '../ui/ServiceButton'
 
@@ -36,7 +37,53 @@ const SERVICES = [
   { id: 'tires',     label: 'Tires',      icon: <TireIcon /> },
 ]
 
-export default function HomeScreen({ onSelectService, isOffline }) {
+function DefaultLocationInput({ value, onSave }) {
+  const [draft, setDraft]   = useState(value)
+  const [saved, setSaved]   = useState(false)
+
+  function handleSave() {
+    const trimmed = draft.trim()
+    if (!trimmed) return
+    onSave(trimmed)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter') handleSave()
+  }
+
+  return (
+    <div className="w-full pt-6 border-t border-gray-200 mt-auto">
+      <p className="text-xs text-gray-400 font-medium uppercase tracking-wide text-center mb-1">
+        Default location
+      </p>
+      <p className="text-xs text-gray-400 text-center mb-3">
+        Used automatically when GPS is unavailable
+      </p>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="ZIP code or city (e.g. 90210)"
+          className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent bg-white"
+          autoComplete="postal-code"
+        />
+        <button
+          onClick={handleSave}
+          disabled={!draft.trim() || draft.trim() === value}
+          className="bg-brand text-white px-4 rounded-xl min-h-[44px] text-sm font-semibold disabled:opacity-40 transition-colors min-w-[60px]"
+        >
+          {saved ? '✓' : 'Save'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function HomeScreen({ onSelectService, isOffline, defaultLocation, onSaveDefaultLocation }) {
   return (
     <div className="flex flex-col items-center px-5 pt-12 pb-8 min-h-screen">
       <div className="flex items-center gap-3 mb-2">
@@ -62,6 +109,10 @@ export default function HomeScreen({ onSelectService, isOffline }) {
           You're offline. Connect to the internet to find services.
         </p>
       )}
+
+      <div className="w-full mt-auto pt-8">
+        <DefaultLocationInput value={defaultLocation} onSave={onSaveDefaultLocation} />
+      </div>
     </div>
   )
 }

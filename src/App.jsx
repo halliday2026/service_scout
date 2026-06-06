@@ -9,7 +9,9 @@ const initialState = {
   screen: 'home',
   selectedService: null,
   locationState: 'idle',   // 'idle' | 'requesting' | 'granted' | 'denied' | 'error'
+  locationDeniedReason: null, // 'permission' | 'unavailable'
   userCoords: null,
+  defaultLocation: localStorage.getItem('defaultLocation') ?? '',
   manualInput: '',
   pendingGeocode: false,
   providers: [],
@@ -29,13 +31,18 @@ function reducer(state, action) {
         providers: [],
         error: null,
         sortBy: 'distance',
-        // Reuse cached coords if already granted; otherwise re-request
+        locationDeniedReason: null,
         locationState: state.userCoords ? 'granted' : 'requesting',
       }
     case 'LOCATION_GRANTED':
-      return { ...state, locationState: 'granted', userCoords: action.payload }
+      return { ...state, locationState: 'granted', userCoords: action.payload, locationDeniedReason: null }
     case 'LOCATION_DENIED':
-      return { ...state, locationState: 'denied' }
+      return { ...state, locationState: 'denied', locationDeniedReason: action.payload ?? 'unavailable' }
+    case 'USE_DEFAULT_LOCATION':
+      // Auto-geocode the saved default location instead of showing the manual input
+      return { ...state, locationState: 'idle', manualInput: state.defaultLocation, pendingGeocode: true }
+    case 'SET_DEFAULT_LOCATION':
+      return { ...state, defaultLocation: action.payload }
     case 'PROVIDERS_LOADING':
       return { ...state, loadingProviders: true, error: null }
     case 'PROVIDERS_LOADED':
@@ -51,7 +58,7 @@ function reducer(state, action) {
     case 'SET_SORT':
       return { ...state, sortBy: action.payload }
     case 'GO_HOME':
-      return { ...initialState, userCoords: state.userCoords, isOffline: state.isOffline }
+      return { ...initialState, defaultLocation: state.defaultLocation, userCoords: state.userCoords, isOffline: state.isOffline }
     case 'SET_OFFLINE':
       return { ...state, isOffline: action.payload }
     default:
@@ -61,6 +68,11 @@ function reducer(state, action) {
 
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState)
+
+  // Persist default location to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('defaultLocation', state.defaultLocation)
+  }, [state.defaultLocation])
 
   // Offline detection
   useEffect(() => {
@@ -75,15 +87,34 @@ export default function App() {
     }
   }, [])
 
-  // GPS location request
+  // When GPS is denied, auto-use the saved default location if one exists —
+  // skips the manual ZIP fallback input entirely
   useEffect(() => {
-    if (state.locationState !== 'requesting') return
-    getCurrentPosition()
-      .then((coords) => dispatch({ type: 'LOCATION_GRANTED', payload: coords }))
-      .catch(() => dispatch({ type: 'LOCATION_DENIED' }))
-  }, [state.locationState])
+    if (state.locationState !== 'denied') return
+    if (!state.defaultLocation) return
+    dispatch({ type: 'USE_DEFAULT_LOCATION' })
+  }, [state.locationState, state.defaultLocation])
 
-  // Manual geocode
+  // Service selection — GPS is called synchronously from the tap handler (not a useEffect)
+  // so it stays within iOS Safari's user-gesture context
+  const handleSelectService = (service) => {
+    if (state.userCoords) {
+      dispatch({ type: 'SELECT_SERVICE', payload: service })
+      return
+    }
+
+    const gpsPromise = getCurrentPosition()
+    dispatch({ type: 'SELECT_SERVICE', payload: service })
+
+    gpsPromise
+      .then((coords) => dispatch({ type: 'LOCATION_GRANTED', payload: coords }))
+      .catch((err) => dispatch({
+        type: 'LOCATION_DENIED',
+        payload: err?.code === 1 ? 'permission' : 'unavailable',
+      }))
+  }
+
+  // Manual geocode (ZIP fallback input or auto-triggered from default location)
   useEffect(() => {
     if (!state.pendingGeocode) return
     dispatch({ type: 'GEOCODE_STARTED' })
@@ -105,8 +136,10 @@ export default function App() {
     <AppShell isOffline={state.isOffline}>
       {state.screen === 'home' && (
         <HomeScreen
-          onSelectService={(service) => dispatch({ type: 'SELECT_SERVICE', payload: service })}
+          onSelectService={handleSelectService}
           isOffline={state.isOffline}
+          defaultLocation={state.defaultLocation}
+          onSaveDefaultLocation={(loc) => dispatch({ type: 'SET_DEFAULT_LOCATION', payload: loc })}
         />
       )}
       {state.screen === 'results' && (
