@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  base: '/service_scout/',
   plugins: [
     react(),
     VitePWA({
@@ -16,8 +17,8 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
+        scope: '/service_scout/',
+        start_url: '/service_scout/',
         icons: [
           {
             src: 'assets/icon-192.png',
